@@ -50,13 +50,13 @@ class WSB:
             pass
             #self.arrivals = self.get_arrivals()
     
-    def replace_conames(ser):
+    def replace_conames(self,ser):
         nicknames_dict = self.nicknames_dict
         for key in tqdm(list(nicknames_dict.keys())):
             ser = ser.str.replace(r'(^|(?<=[^A-Za-z0-9\']))'+key+r'($|(?=[^A-Za-z0-9\']))',nicknames_dict[key],flags=re.IGNORECASE)
         return ser
 
-    def replace_cotickers(ser,all_tickers,common_words,ignore):
+    def replace_cotickers(self,ser):
         all_tickers = self.all_tickers
         common_words = self.common_words
         ignore = self.ignore
