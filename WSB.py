@@ -29,24 +29,6 @@ EDITS = {'AAL':['American Airlines'],'X':['US Steel','United States Steel'],'CRS
          'U':['Unity'],'CLF':['ClevelandCliffs','Cleveland Cliffs'],'TSM':['Taiwan Semiconductor','Taiwan Semi'],
          'AIV':['Apartment Investment'],'AAPL':['Apple','🍏','🍎'],'RKT':['']}
 
-def replace_conames(ser,nicknames_dict):
-    for key in tqdm(list(nicknames_dict.keys())):
-        ser = ser.str.replace(r'(^|(?<=[^A-Za-z0-9\']))'+key+r'($|(?=[^A-Za-z0-9\']))',nicknames_dict[key],flags=re.IGNORECASE)
-    return ser
-
-def replace_cotickers(ser,all_tickers,common_words,ignore):
-    for tiq in tqdm(all_tickers):
-        if tiq in ignore:
-            pass
-        elif len(tiq) == 1:
-            ser = ser.str.replace(r'(^|(?<=[^A-Za-z\']))\$'+tiq+r'($|(?=[^A-Za-z\']))','$'+tiq,flags=re.IGNORECASE)
-        elif tiq in common_words:
-            ser = ser.str.replace(r'(^|(?<=[^A-Za-z\']))\$'+tiq+r'($|(?=[^A-Za-z\']))','$'+tiq,flags=re.IGNORECASE)
-            ser = ser.str.replace(r'(^|(?<=[^A-Za-z\'\$]))'+tiq+r'($|(?=[^A-Za-z\']))','$'+tiq)
-        else:
-            ser = ser.str.replace(r'(^|(?<=[^A-Za-z\']))(\$){0,1}'+tiq+r'($|(?=[^A-Za-z\']))','$'+tiq,flags=re.IGNORECASE)
-    return ser
-
 class WSB:
 
     def __init__(self,sd=None,ed=None,saved_path=None,saved_df=None,saved_arrivals_path=None,saved_tickers=None,n_cores=1):
@@ -67,6 +49,30 @@ class WSB:
         else:
             pass
             #self.arrivals = self.get_arrivals()
+    
+    @staticmethod
+    def replace_conames(ser):
+        nicknames_dict = self.nicknames_dict
+        for key in tqdm(list(nicknames_dict.keys())):
+            ser = ser.str.replace(r'(^|(?<=[^A-Za-z0-9\']))'+key+r'($|(?=[^A-Za-z0-9\']))',nicknames_dict[key],flags=re.IGNORECASE)
+        return ser
+
+    @staticmethod
+    def replace_cotickers(ser,all_tickers,common_words,ignore):
+        all_tickers = self.all_tickers
+        common_words = self.common_words
+        ignore = self.ignore
+        for tiq in tqdm(all_tickers):
+            if tiq in ignore:
+                pass
+            elif len(tiq) == 1:
+                ser = ser.str.replace(r'(^|(?<=[^A-Za-z\']))\$'+tiq+r'($|(?=[^A-Za-z\']))','$'+tiq,flags=re.IGNORECASE)
+            elif tiq in common_words:
+                ser = ser.str.replace(r'(^|(?<=[^A-Za-z\']))\$'+tiq+r'($|(?=[^A-Za-z\']))','$'+tiq,flags=re.IGNORECASE)
+                ser = ser.str.replace(r'(^|(?<=[^A-Za-z\'\$]))'+tiq+r'($|(?=[^A-Za-z\']))','$'+tiq)
+            else:
+                ser = ser.str.replace(r'(^|(?<=[^A-Za-z\']))(\$){0,1}'+tiq+r'($|(?=[^A-Za-z\']))','$'+tiq,flags=re.IGNORECASE)
+        return ser
 
 
     def get_arrivals(self):
@@ -245,26 +251,28 @@ class WSB:
         df = raw.copy()
         df['tickers_clean'] = df['body_clean'].copy()
 
-        def parallelize_dataframe(df, func, args, n_cores=n_cores):
+        def parallelize_dataframe(df, func, n_cores=n_cores):
             df_split = np.array_split(df, n_cores)
             pool = Pool(n_cores)
-            df = pd.concat(pool.starmap(partial(func,args), df_split))
+            df = pd.concat(pool.map(func, df_split))
             pool.close()
             pool.join()
             return df
 
-        df['tickers_clean'] = parallelize_dataframe(df['tickers_clean'],func=replace_conames,args=[nicknames_dict])
+        self.nicknames_dict = nicknames_dict
+
+        df['tickers_clean'] = parallelize_dataframe(df['tickers_clean'],func=replace_conames)
 
         """
         for key in tqdm(list(nicknames_dict.keys())):
             df['tickers_clean'] = df['tickers_clean'].str.replace(r'(^|(?<=[^A-Za-z0-9\']))'+key+r'($|(?=[^A-Za-z0-9\']))',nicknames_dict[key],flags=re.IGNORECASE)
         """
 
-        all_tickers = names['symbol'].values
-        common_words = ['DASH','SNOW','NET','EDIT','RIDE','WISH','WORK',
+        self.all_tickers = names['symbol'].values
+        self.common_words = ['DASH','SNOW','NET','EDIT','RIDE','WISH','WORK',
                         'OPEN','SHOP','LOW','COST','SPOT','RUN','EVER','GOLD','BOX','AIR','PLAY']
-        ignore = ['MOON','YOLO','IPO','BE']
-        df['tickers_clean'] = parallelize_dataframe(df['tickers_clean'],func=replace_cotickers,args=[all_tickers,common_words,ignore])
+        self.ignore = ['MOON','YOLO','IPO','BE']
+        df['tickers_clean'] = parallelize_dataframe(df['tickers_clean'],func=replace_cotickers)
         """
         all_tickers = names['symbol'].values
         common_words = ['DASH','SNOW','NET','EDIT','RIDE','WISH','WORK',
