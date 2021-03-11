@@ -29,7 +29,7 @@ EDITS = {'AAL':['American Airlines'],'X':['US Steel','United States Steel'],'CRS
 
 class WSB:
 
-    def __init__(self,sd=None,ed=None,saved_path=None,saved_df=None,saved_arrivals_path=None,saved_tickers=None):
+    def __init__(self,sd=None,ed=None,saved_path=None,saved_df=None,saved_arrivals_path=None,saved_tickers=None,n_cores=1):
         assert((sd!=None and ed!=None) or (type(saved_path)!=type(None)) or (type(saved_df)!=type(None)))
         if type(saved_path)!=type(None):
             self.cleaned = self.load_saved(saved_path)
@@ -37,7 +37,7 @@ class WSB:
             self.cleaned = saved_df
         else:
             raw = self.load_data(sd,ed)
-            self.cleaned = self.find_tickers(raw)
+            self.cleaned = self.find_tickers(raw,n_cores)
         if type(saved_tickers)!=type(None):
             self.tickers = saved_tickers
         else:
@@ -45,7 +45,8 @@ class WSB:
         if type(saved_arrivals_path)!=type(None):
             self.arrivals = np.load(saved_arrivals_path,allow_pickle=True)
         else:
-            self.arrivals = self.get_arrivals()
+            pass
+            #self.arrivals = self.get_arrivals()
 
 
     def get_arrivals(self):
@@ -193,7 +194,7 @@ class WSB:
     def top_tickers(self,threshold=THRESH):
         return self.tickers[self.tickers >= threshold]
     
-    def find_tickers(self,raw):
+    def find_tickers(self,raw,n_cores):
         self.tickers = self.get_tickers(raw=raw)
         tickers = self.top_tickers()
         tickers_list = [ticker[1:] for ticker in tickers.index]
@@ -223,8 +224,44 @@ class WSB:
                     nicknames_dict[nickname.lower()] = '$'+symbol.upper()
         df = raw.copy()
         df['tickers_clean'] = df['body_clean'].copy()
+
+        def parallelize_dataframe(df, func, n_cores=n_cores):
+            df_split = np.array_split(df, n_cores)
+            pool = Pool(n_cores)
+            df = pd.concat(pool.map(func, df_split))
+            pool.close()
+            pool.join()
+            return df
+
+        def replace_conames(ser):
+            for key in tqdm(list(nicknames_dict.keys())):
+                ser = ser.str.replace(r'(^|(?<=[^A-Za-z0-9\']))'+key+r'($|(?=[^A-Za-z0-9\']))',nicknames_dict[key],flags=re.IGNORECASE)
+            return ser
+        df['tickers_clean'] = parallelize_dataframe(df['tickers_clean'],func=replace_conames)
+
+        """
         for key in tqdm(list(nicknames_dict.keys())):
             df['tickers_clean'] = df['tickers_clean'].str.replace(r'(^|(?<=[^A-Za-z0-9\']))'+key+r'($|(?=[^A-Za-z0-9\']))',nicknames_dict[key],flags=re.IGNORECASE)
+        """
+
+        all_tickers = names['symbol'].values
+        common_words = ['DASH','SNOW','NET','EDIT','RIDE','WISH','WORK',
+                        'OPEN','SHOP','LOW','COST','SPOT','RUN','EVER','GOLD','BOX','AIR','PLAY']
+        ignore = ['MOON','YOLO','IPO','BE']
+        def replace_cotickers(ser):
+            for tiq in tqdm(all_tickers):
+                if tiq in ignore:
+                    pass
+                elif len(tiq) == 1:
+                    ser = ser.str.replace(r'(^|(?<=[^A-Za-z\']))\$'+tiq+r'($|(?=[^A-Za-z\']))','$'+tiq,flags=re.IGNORECASE)
+                elif tiq in common_words:
+                    ser = ser.str.replace(r'(^|(?<=[^A-Za-z\']))\$'+tiq+r'($|(?=[^A-Za-z\']))','$'+tiq,flags=re.IGNORECASE)
+                    ser = ser.str.replace(r'(^|(?<=[^A-Za-z\'\$]))'+tiq+r'($|(?=[^A-Za-z\']))','$'+tiq)
+                else:
+                    ser = ser.str.replace(r'(^|(?<=[^A-Za-z\']))(\$){0,1}'+tiq+r'($|(?=[^A-Za-z\']))','$'+tiq,flags=re.IGNORECASE)
+            return ser
+        df['tickers_clean'] = parallelize_dataframe(df['tickers_clean'],func=replace_cotickers)
+        """
         all_tickers = names['symbol'].values
         common_words = ['DASH','SNOW','NET','EDIT','RIDE','WISH','WORK',
                          'OPEN','SHOP','LOW','COST','SPOT','RUN','EVER','GOLD','BOX','AIR','PLAY']
@@ -239,7 +276,8 @@ class WSB:
                 df['tickers_clean'] = df['tickers_clean'].str.replace(r'(^|(?<=[^A-Za-z\'\$]))'+tiq+r'($|(?=[^A-Za-z\']))','$'+tiq)
             else:
                 df['tickers_clean'] = df['tickers_clean'].str.replace(r'(^|(?<=[^A-Za-z\']))(\$){0,1}'+tiq+r'($|(?=[^A-Za-z\']))','$'+tiq,flags=re.IGNORECASE)
-        
+        """
+
         df['tickers'] = df['tickers_clean'].str.findall('(\$[A-Z]+)').apply(lambda x: list(set([tick for tick in x if tick[1:] in names['symbol'].values])))
         df['reply_tickers'] = [[] for i in range(len(df))]
         df['reply_tickers'].loc[df['tickers'].str.len().eq(0)] = df['parent_id'].loc[df['tickers'].str.len().eq(0)].apply(lambda idx: df.loc[idx,'tickers'] if idx in df.index else [])
