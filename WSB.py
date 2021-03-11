@@ -249,9 +249,9 @@ class WSB:
             df_split = np.array_split(df, n_cores)
             pool = Pool(n_cores)
             if len(args) == 1:
-                df = pd.concat(pool.starmap(partial(func,nicknames_dict=args[0]), df_split))
+                df = pd.concat(pool.starmap(partial(func,args[0]), df_split))
             else:
-                df = pd.concat(pool.starmap(partial(func,all_tickers=args[0],common_words=args[1],ignore=args[2]), df_split))
+                df = pd.concat(pool.starmap(partial(func,args[0],args[1],args[2]), df_split))
             pool.close()
             pool.join()
             return df
