@@ -12,7 +12,7 @@ import yfinance as yf
 import json
 import time
 
-ROOT = 'C:/Users/dangi/Documents/Thesis'
+ROOT = '/scratch/network/danieleg/senior-thesis/data'
 EMOJIS_INVERSE = inv_map = {v: k for k, v in emoji.UNICODE_EMOJI['en'].items()}
 #NLP = spacy.load("en_core_web_sm")
 THRESH = 100
