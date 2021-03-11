@@ -48,7 +48,7 @@ class WSB:
             self.arrivals = np.load(saved_arrivals_path,allow_pickle=True)
         else:
             pass
-            #self.arrivals = self.get_arrivals()
+            self.arrivals = self.get_arrivals()
     
     def replace_conames(self,ser):
         nicknames_dict = self.nicknames_dict
@@ -76,8 +76,10 @@ class WSB:
     def get_arrivals(self):
         arrivals = []
         for i,ticker in tqdm(enumerate(self.tickers.index)):
+            #print(ticker)
             ticker_arrivals = self.find(ticker)
-            ticker_arrivals = ticker_arrivals['timestamp'].astype(np.int64).to_numpy()/(10**9)
+            #print(ticker_arrivals['timestamp'].apply(lambda x: time.mktime(x.timetuple())).to_numpy())
+            ticker_arrivals = ticker_arrivals['timestamp'].apply(lambda x: time.mktime(x.timetuple())).to_numpy()
             arrivals.append(ticker_arrivals)
         return arrivals
 
