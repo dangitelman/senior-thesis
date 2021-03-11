@@ -11,6 +11,7 @@ import re
 import yfinance as yf
 import json
 import time
+from multiprocessing import Pool
 
 ROOT = '/scratch/network/danieleg/senior-thesis/data'
 EMOJIS_INVERSE = inv_map = {v: k for k, v in emoji.UNICODE_EMOJI['en'].items()}
