@@ -13,7 +13,7 @@ import json
 import time
 
 ROOT = 'C:/Users/dangi/Documents/Thesis'
-EMOJIS_INVERSE = inv_map = {v: k for k, v in emoji.UNICODE_EMOJI.items()}
+EMOJIS_INVERSE = inv_map = {v: k for k, v in emoji.UNICODE_EMOJI['en'].items()}
 #NLP = spacy.load("en_core_web_sm")
 THRESH = 100
 STOPS = ['Co','Inc','Ltd','Company','Technologies','ADR','RT','Systems','Industries','Interactive','Holding','Trust',
@@ -284,7 +284,7 @@ def transform(comment):
     new = re.sub(r'\’','\'',new)
     new = re.sub(r'&#x200B;','',new,flags=re.IGNORECASE)
     
-    new = [' <emoji>' + emoji.UNICODE_EMOJI[r'{}'.format(letter)][1:-1] + '<emoji> ' if letter in emoji.UNICODE_EMOJI.keys() else letter for letter in new]
+    new = [' <emoji>' + emoji.UNICODE_EMOJI['en'][r'{}'.format(letter)][1:-1] + '<emoji> ' if letter in emoji.UNICODE_EMOJI['en'].keys() else letter for letter in new]
     new = ''.join(new)
     new = re.sub(r'[^a-zA-Z0-9\s\n\.\!\?\,\$\-\_\'\<\>\:\/\=\&\%]',' ',new)
     
