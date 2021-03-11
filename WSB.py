@@ -248,10 +248,7 @@ class WSB:
         def parallelize_dataframe(df, func, args, n_cores=n_cores):
             df_split = np.array_split(df, n_cores)
             pool = Pool(n_cores)
-            if len(args) == 1:
-                df = pd.concat(pool.starmap(partial(func,args[0]), df_split))
-            else:
-                df = pd.concat(pool.starmap(partial(func,args[0],args[1],args[2]), df_split))
+            df = pd.concat(pool.starmap(partial(func,args), df_split))
             pool.close()
             pool.join()
             return df
