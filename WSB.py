@@ -198,16 +198,10 @@ class WSB:
         tickers = self.top_tickers()
         tickers_list = [ticker[1:] for ticker in tickers.index]
         dictionary = {}
-        for t in tqdm(tickers_list):
-            ticker = yf.Ticker(t)
-            try:
-                info = ticker.get_info()
-                if info['quoteType'] == 'ETF':
-                    dictionary[t] = ''
-                elif info['quoteType'] == 'EQUITY':
-                    dictionary[t] = info["shortName"]
-            except:
-                continue
+        company_names = pd.read_csv(ROOT+'/company_names.csv',index_col=0,header=None)
+        company_names = company_names.replace(np.nan,'')
+        for co in company_names.index:
+            dictionary[co] = company_names.loc[co].values[0]
         stops = [stop.lower() for stop in STOPS]
         names = pd.DataFrame(np.array([list(dictionary.keys()),list(dictionary.values())]).T,columns=['symbol','name'])
         names['nickname'] = names['name'].str.replace('\.com','')
