@@ -12,6 +12,7 @@ import yfinance as yf
 import json
 import time
 from multiprocessing import Pool
+from functools import partial
 
 ROOT = '/scratch/network/danieleg/senior-thesis/data'
 EMOJIS_INVERSE = inv_map = {v: k for k, v in emoji.UNICODE_EMOJI['en'].items()}
@@ -244,15 +245,18 @@ class WSB:
         df = raw.copy()
         df['tickers_clean'] = df['body_clean'].copy()
 
-        def parallelize_dataframe(df, func, n_cores=n_cores):
+        def parallelize_dataframe(df, func, args, n_cores=n_cores):
             df_split = np.array_split(df, n_cores)
             pool = Pool(n_cores)
-            df = pd.concat(pool.map(func, df_split))
+            if len(args) == 1:
+                df = pd.concat(pool.starmap(partial(func,nicknames_dict=args[0]), df_split))
+            else:
+                df = pd.concat(pool.starmap(partial(func,all_tickers=args[0],common_words=args[1],ignore=args[2]), df_split))
             pool.close()
             pool.join()
             return df
 
-        df['tickers_clean'] = parallelize_dataframe(df['tickers_clean'],func=lambda x: replace_conames(x,nicknames_dict=nicknames_dict))
+        df['tickers_clean'] = parallelize_dataframe(df['tickers_clean'],func=replace_conames,args=[nicknames_dict])
 
         """
         for key in tqdm(list(nicknames_dict.keys())):
@@ -263,7 +267,7 @@ class WSB:
         common_words = ['DASH','SNOW','NET','EDIT','RIDE','WISH','WORK',
                         'OPEN','SHOP','LOW','COST','SPOT','RUN','EVER','GOLD','BOX','AIR','PLAY']
         ignore = ['MOON','YOLO','IPO','BE']
-        df['tickers_clean'] = parallelize_dataframe(df['tickers_clean'],func=lambda x: replace_cotickers(x,all_tickers=all_tickers,common_words=common_words,ignore=ignore))
+        df['tickers_clean'] = parallelize_dataframe(df['tickers_clean'],func=replace_cotickers,args=[all_tickers,common_words,ignore])
         """
         all_tickers = names['symbol'].values
         common_words = ['DASH','SNOW','NET','EDIT','RIDE','WISH','WORK',
